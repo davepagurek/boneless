@@ -19,42 +19,52 @@ ground_body = world.CreateStaticBody(
     shapes=polygonShape(box=(50, 1)),
 )
 
-NUM_LEGS = 5
 x0 = 10
 y0 = 10
+s = 1
+total_weight = 10
 
 masses = []
 joints = []
 
-body = world.CreateDynamicBody(position=(x0, y0))
-circle = body.CreateCircleFixture(radius=0.5, density=1, friction=0.5)
-masses.append(body)
+min_dists = []
 
-for i in range(NUM_LEGS):
-    theta = i/NUM_LEGS * 2 * math.pi
-    r = 2
-    body = world.CreateDynamicBody(position=(x0 + r*math.cos(theta), y0 + r*math.sin(theta)))
-    circle = body.CreateCircleFixture(radius=0.25, density=1, friction=0.5)
-    masses.append(body)
-    joint = world.CreateDistanceJoint(
-            bodyA=body,
-            bodyB=masses[0],
-            frequencyHz = 4.0,
-            dampingRatio=0.5,
-            length=r)
-    joints.append(joint)
+with open("bodies/quad.obj") as f:
+    for line in f:
+        if line.startswith("v "):
+            x, y, _ = [float(loc) for loc in line[2:].split(" ")]
+            body = world.CreateDynamicBody(
+                    position=(x0 + s*x, y0 + s*y),
+                    fixedRotation=True)
+            circle = body.CreateCircleFixture(
+                    radius=0.3,
+                    density=1,
+                    friction=0.4)
+            masses.append(body)
+            min_dists.append(1)
+        elif line.startswith("f "):
+            indices = [int(idx)-1 for idx in line[2:].split(" ")]
+            for i in range(3):
+                a = masses[indices[i]]
+                b = masses[indices[(i+1) % 3]]
+                l = math.hypot(a.position[0]-b.position[0], a.position[1]-b.position[1])
+                min_dists[indices[i]] = min(l, min_dists[indices[i]])
+                min_dists[indices[(i+1) % 3]] = min(l, min_dists[indices[(i+1) % 3]])
+                joint = world.CreateDistanceJoint(
+                        bodyA=a,
+                        bodyB=b,
+                        frequencyHz = 10.0,
+                        dampingRatio=0.5,
+                        length=l)
+                joints.append(joint)
 
-for i in range(NUM_LEGS):
-    a = masses[i + 1]
-    b = masses[(i + 1) % NUM_LEGS + 1]
-    l = math.hypot(a.position[0]-b.position[0], a.position[1]-b.position[1])
-    joint = world.CreateDistanceJoint(
-            bodyA=a,
-            bodyB=b,
-            frequencyHz = 4.0,
-            dampingRatio=0.5,
-            length=l)
-    joints.append(joint)
+total_area = 0
+for i, body in enumerate(masses):
+    body.fixtures[0].shape.radius = min_dists[i] / 2
+    total_area += math.pi * body.fixtures[0].shape.radius**2
+
+for body in masses:
+    body.fixtures[0].density = total_weight /total_area 
 
 def draw_polygon(polygon, body, fixture):
     vertices = [(body.transform * v) * PPM for v in polygon.vertices]
