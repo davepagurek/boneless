@@ -1,2 +1,4 @@
 box2d-py
 pygame
+gym
+numpy
