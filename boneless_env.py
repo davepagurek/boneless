@@ -128,6 +128,26 @@ class BonelessEnv(gym.Env):
         # TODO
         return observation, reward, done, {}
 
+    def num_joints(self):
+        return len(self.joints)
+
+    def get_joint_rest_length(self, idx):
+        j = self.joints[idx]
+        return j._b2DistanceJoint__GetLength()
+
+    def get_joint_actual_length(self, idx):
+        idx_a, idx_b = self.joint_defs[idx]
+        a = self.masses[idx_a]
+        b = self.masses[idx_b]
+        l = math.hypot(
+                a.position[0]-b.position[0],
+                a.position[1]-b.position[1])
+        return l
+
+    def set_joint_rest_length(self, idx, length):
+        j = self.joints[idx]
+        j._b2DistanceJoint__SetLength(length)
+
     def render(self, mode='human'):
         if self.viewer is None:
             from gym.envs.classic_control import rendering
