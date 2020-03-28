@@ -11,8 +11,8 @@ while not done:
     obs, reward, done, info = env.step(action)
 
     if t == 100:
-        for i in range(env.num_joints()):
-            env.set_joint_rest_length(i, 1.0)
+        for i in range(env.soft_body.num_edges()):
+            env.soft_body.set_edge_rest_length(i, 1.0)
 
     env.render()
     t += 1
