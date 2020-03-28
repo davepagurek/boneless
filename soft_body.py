@@ -21,8 +21,8 @@ class SoftBody:
                         [ax, ay, ar] = self.mass_defs[idx_a]
                         [bx, by, br] = self.mass_defs[idx_b]
                         l = math.hypot(ax-bx, ay-by)
-                        ar = 0.2 # min(ar, l*0.5)
-                        br = 0.2 # min(br, l*0.5)
+                        ar = max(min(ar, l*0.4), 0.3)
+                        br = max(min(br, l*0.4), 0.3)
                         self.mass_defs[idx_a] = (ax, ay, ar)
                         self.mass_defs[idx_b] = (bx, by, br)
                         self.joint_defs.append((idx_a, idx_b))
@@ -93,12 +93,11 @@ class SoftBody:
         m.linearVelocity[1] = vel_y
 
     def get_vertex_radius(self, idx):
-        # TODO
-        assert(False)
+        return self.masses[idx].fixtures[0].shape.radius
 
     def set_vertex_radius(self, idx, radius):
-        # TODO
-        assert(False)
+        assert(radius > 0.0)
+        self.masses[idx].fixtures[0].shape.radius = radius
 
     def get_edge_rest_length(self, idx):
         j = self.joints[idx]
