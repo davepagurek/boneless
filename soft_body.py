@@ -103,13 +103,19 @@ class SoftBody:
         j = self.joints[idx]
         return j._b2DistanceJoint__GetLength()
 
+    def get_orig_edge_rest_length(self, idx):
+        idx_a, idx_b = self.joint_defs[idx]
+        ax, ay, ar = self.mass_defs[idx_a]
+        bx, by, br = self.mass_defs[idx_b]
+        return math.hypot(self.s*(ax-bx), self.s*(ay-by))
+
     def get_edge_actual_length(self, idx):
         idx_a, idx_b = self.joint_defs[idx]
         a = self.masses[idx_a]
         b = self.masses[idx_b]
         l = math.hypot(
             a.position[0] - b.position[0],
-            a.position[1] - b.position
+            a.position[1] - b.position[1]
         )
         return l;
 
@@ -126,6 +132,16 @@ class SoftBody:
             for dim in [0, 1]
         ]
         return com_x, com_y
+
+    def get_avg_velocity(self):
+        def mass(rad):
+            return math.pi * rad**2 * self.density
+
+        v_x, v_y = [
+            np.mean([m.linearVelocity[dim] * mass(m.fixtures[0].shape.radius) for m in self.masses]) / self.total_weight
+            for dim in [0, 1]
+        ]
+        return v_x, v_y
 
     # TODO: allow parent transform to be passed (i.e. for scaling and translating entire view/entire object)
     def create_geometry(self, viewer, PPM):
