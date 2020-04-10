@@ -54,19 +54,20 @@ class BonelessEnv(gym.Env):
         state = []
 
         com_x, com_y = self.soft_body.get_center_of_mass()
+        avg_velocity_x, avg_velocity_y = self.soft_body.get_avg_velocity()
         for i in range(n_verts):
             x, y = self.soft_body.get_vertex_position(i)
             vx, vy = self.soft_body.get_vertex_velocity(i)
             state.append(x - com_x)
             state.append(y - com_y)
-            state.append(vx)
-            state.append(vy)
+            state.append(vx - avg_velocity_x)
+            state.append(vy - avg_velocity_y)
 
         return np.array(state)
 
     def make_reward(self):
         avg_velocity_x, _ = self.soft_body.get_avg_velocity()
-        return max(0, avg_velocity_x)*10
+        return avg_velocity_x*10
 
     def is_done(self):
         return self.time >= 10
@@ -90,7 +91,7 @@ class BonelessEnv(gym.Env):
         observation = self.observe_state()
         reward = self.make_reward()
         done = self.is_done()
-        # TODO
+
         return observation, reward, done, {}
 
     def render(self, mode='human'):

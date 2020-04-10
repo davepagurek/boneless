@@ -104,7 +104,7 @@ class SoftBody:
             circle = body.CreateCircleFixture(
                     radius=r,
                     density=self.density,
-                    friction=0.4)
+                    friction=0.6)
             self.masses.append(body)
         for idx_a, idx_b in self.joint_defs:
             a = self.masses[idx_a]
