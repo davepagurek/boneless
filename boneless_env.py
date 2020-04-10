@@ -9,7 +9,7 @@ from soft_body import SoftBody
 class BonelessEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, obj="bodies/quad.obj"):
+    def __init__(self, mesh="bodies/quad.obj", muscles="bodies/muscles.obj"):
         super(BonelessEnv, self).__init__()
 
         # How much of the previous spring length to preserve when making a change
@@ -23,7 +23,7 @@ class BonelessEnv(gym.Env):
             position=(0, 0),
             shapes=polygonShape(box=(50, 1)))
 
-        self.soft_body = SoftBody(self.world, obj)
+        self.soft_body = SoftBody(self.world, mesh, muscles)
 
         self.PPM = 20.0 # pixels per meter
         self.SCREEN_WIDTH = 640
