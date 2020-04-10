@@ -66,7 +66,7 @@ class BonelessEnv(gym.Env):
 
     def make_reward(self):
         avg_velocity_x, _ = self.soft_body.get_avg_velocity()
-        return min(0, avg_velocity_x)*10
+        return max(0, avg_velocity_x)*10
 
     def is_done(self):
         return self.time >= 10
