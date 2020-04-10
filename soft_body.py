@@ -12,8 +12,15 @@ class Muscle:
         self.transform = np.identity(3)
         self.color = [np.random.uniform(), np.random.uniform(), np.random.uniform()]
 
+    def reset(self):
+        self.set_transform([1, 0, 0, 1])
+
     def set_transform(self, transform):
-        self.transform = transform
+        self.transform = np.array([
+            [ transform[0], transform[1], 0],
+            [ transform[1], transform[2], 0],
+            [0, 0, 1]
+        ])
 
     def get_joint_lengths(self):
         lengths = []
@@ -23,7 +30,10 @@ class Muscle:
 
             transformed_a = self.transform @ relative_a
             transformed_b = self.transform @ relative_b
-            lengths.append(idx, np.linalg.norm(transformed_a - transformed_b))
+            target_length = np.linalg.norm(transformed_a - transformed_b)
+            orig_length = math.hypot(ax-bx, ay-by);
+            target_length = max(0.25*orig_length, min(orig_length, target_length))
+            lengths.append((idx, target_length))
 
         return lengths
 
@@ -35,7 +45,7 @@ class Muscle:
         return math.hypot(self.position[0] - x, self.position[1] - y)
 
 class SoftBody:
-    # Assumes muscles are in x,y plane. In blender, export an obj with x forward, y up
+    # Assumes muscles are in x,y plane. In blender, export an obj with x forward, z up
     def __init__(self, world, mesh_path, muscles_path):
         self.world = world
 
@@ -65,7 +75,7 @@ class SoftBody:
             dists = [ m.dist_to((ax+bx)/2, (ay+by)/2) for m in self.muscles ]
             closest_muscle = dists.index(min(dists))
 
-            self.muscles[closest_muscle].add_joint(joint_idx, (ax, ay), (bx, by, (ax, ay), (bx, by)))
+            self.muscles[closest_muscle].add_joint(joint_idx, (ax, ay), (bx, by))
             self.joint_muscles.append(self.muscles[closest_muscle])
 
         self.total_weight = 10
@@ -73,7 +83,7 @@ class SoftBody:
         self.density = self.total_weight / self.total_area
         
         self.x0 = 10
-        self.y0 = 10
+        self.y0 = 5
         self.s = 1 # TODO: rename to scale
 
         self.joints = []
@@ -109,12 +119,28 @@ class SoftBody:
                     dampingRatio=0.1,
                     length=l)
             self.joints.append(joint)
+        for muscle in self.muscles:
+            muscle.reset()
 
     def num_vertices(self):
         return len(self.mass_defs)
 
     def num_edges(self):
         return len(self.joint_defs)
+
+    def num_muscles(self):
+        return len(self.muscles)
+
+    def set_muscle_transforms(self, transforms):
+        for transform, muscle in zip(np.split(transforms, self.num_muscles()), self.muscles):
+            muscle.set_transform(transform)
+
+    def target_edge_lengths(self):
+        targets = [1] * self.num_edges()
+        for muscle in self.muscles:
+            for joint_idx, length in muscle.get_joint_lengths():
+                targets[joint_idx] = length
+        return targets
 
     def get_vertex_position(self, idx):
         m = self.masses[idx]

@@ -33,34 +33,40 @@ class BonelessEnv(gym.Env):
 
         self.viewer = None
 
-        # Actions: [0,1] representing contraction for each joint
         n_edges = self.soft_body.num_edges()
+        n_verts = self.soft_body.num_vertices()
+        n_muscles = self.soft_body.num_muscles()
+
+        # Actions: Top-left 2x2 submatrix of each muscle's transformation matrix
         self.action_space = spaces.Box(
-                np.zeros(n_edges),
-                np.ones(n_edges),
+                -np.finfo(np.float32).max * np.ones(4*n_muscles),
+                np.finfo(np.float32).max * np.ones(4*n_muscles),
                 dtype=np.float32)
 
-        # Observations: [0,1] representing compression of each spring
-        n_verts = self.soft_body.num_vertices()
+        # Observations: Relative coordinates and velocities of each mass
         self.observation_space = spaces.Box(
-                np.zeros(n_edges),
-                np.ones(n_edges),
+                -np.finfo(np.float32).max * np.ones(4*n_verts),
+                np.finfo(np.float32).max * np.ones(4*n_verts),
                 dtype=np.float32)
 
     def observe_state(self):
-        n_edges = self.soft_body.num_edges()
+        n_verts = self.soft_body.num_vertices()
+        state = []
 
-        def get_compression(i):
-            orig_length = self.soft_body.get_orig_edge_rest_length(i)
-            current_length = self.soft_body.get_edge_actual_length(i)
-            return current_length / orig_length
+        com_x, com_y = self.soft_body.get_center_of_mass()
+        for i in range(n_verts):
+            x, y = self.soft_body.get_vertex_position(i)
+            vx, vy = self.soft_body.get_vertex_velocity(i)
+            state.append(x - com_x)
+            state.append(y - com_y)
+            state.append(vx)
+            state.append(vy)
 
-        return np.array([ get_compression(i) for i in range(n_edges) ])
+        return np.array(state)
 
     def make_reward(self):
-        center_of_mass_x, _ = self.soft_body.get_center_of_mass()
         avg_velocity_x, _ = self.soft_body.get_avg_velocity()
-        return center_of_mass_x + avg_velocity_x
+        return min(0, avg_velocity_x)*10
 
     def is_done(self):
         return self.time >= 10
@@ -75,13 +81,10 @@ class BonelessEnv(gym.Env):
         self.world.Step(self.TIME_STEP, 50, 10)
         self.time += self.TIME_STEP
 
-        for i, scale in enumerate(action):
-            scale = min(1, max(0, scale))
-            scale = 0.5*scale + 0.5 # Max compression: 0.5
+        self.soft_body.set_muscle_transforms(action)
+        for i, target in enumerate(self.soft_body.target_edge_lengths()):
             current_length = self.soft_body.get_edge_rest_length(i)
-            orig_length = self.soft_body.get_orig_edge_rest_length(i)
-            target_length = scale * orig_length
-            new_length = (1 - self.smooth) * target_length + self.smooth * current_length
+            new_length = (1 - self.smooth) * target + self.smooth * current_length
             self.soft_body.set_edge_rest_length(i, new_length)
 
         observation = self.observe_state()
