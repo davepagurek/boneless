@@ -195,7 +195,7 @@ if __name__ == '__main__':
     parser.add_argument('--v_lr', type=float, default=3e-4, help='Value learning rate')
 
     parser.add_argument('--psi_mode', type=str, default='gae', help='value to modulate logp gradient with [future_return, gae]')
-    parser.add_argument('--loss_mode', type=str, default='vpg', help='Loss mode [vpg, ppo]')
+    parser.add_argument('--loss_mode', type=str, default='ppo', help='Loss mode [vpg, ppo]')
     parser.add_argument('--clip_ratio', type=float, default=0.1, help='PPO clipping ratio')
 
     parser.add_argument('--render_interval', type=int, default=100, help='render every N')
