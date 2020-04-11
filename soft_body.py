@@ -13,14 +13,24 @@ class Muscle:
         self.color = [np.random.uniform(), np.random.uniform(), np.random.uniform()]
 
     def reset(self):
-        self.set_transform([1, 0, 0, 1])
+        self.set_transform([0, 0, 1])
 
     def set_transform(self, transform):
-        self.transform = np.array([
-            [ transform[0], transform[1], 0],
-            [ transform[1], transform[2], 0],
-            [0, 0, 1]
+        angle = transform[0]
+        skew = transform[1]
+        scale = 0.1 + 1 / (1 + math.exp(-transform[2]))
+        # scale = 1/(1+abs(skew))
+        rotation = np.array([
+            [ math.cos(angle), -math.sin(angle), 0],
+            [ math.sin(angle), math.cos(angle), 0],
+            [ 0, 0, 1 ]
         ])
+        shear = np.array([
+            [ scale, skew, 0 ],
+            [ 0, scale, 0 ],
+            [ 0, 0, 1 ]
+        ])
+        self.transform = shear @ rotation
 
     def get_joint_lengths(self):
         lengths = []
@@ -32,7 +42,7 @@ class Muscle:
             transformed_b = self.transform @ relative_b
             target_length = np.linalg.norm(transformed_a - transformed_b)
             orig_length = math.hypot(ax-bx, ay-by);
-            target_length = max(0.25*orig_length, min(orig_length, target_length))
+            target_length = max(0.5*orig_length, min(2*orig_length, target_length))
             lengths.append((idx, target_length))
 
         return lengths
@@ -56,7 +66,7 @@ class SoftBody:
         muscle_verts, _ = parse_obj(muscles_path)
 
         self.muscles = [ Muscle(x,y) for x, y, _ in muscle_verts ]
-        self.mass_defs = [ (x, y, 1) for x, y, _ in mass_verts ] # (x, y, r)
+        self.mass_defs = [ (x, y, 1.0) for x, y, _ in mass_verts ] # (x, y, r)
         self.joint_defs = mass_edges # (idx_a, idx_b)
         self.joint_muscles = []
 
@@ -66,8 +76,8 @@ class SoftBody:
 
             # Update mass radii
             l = math.hypot(ax-bx, ay-by)
-            ar = max(min(ar, l*0.4), 0.3)
-            br = max(min(br, l*0.4), 0.3)
+            ar = max(min(ar, l*0.2), 0.3)
+            br = max(min(br, l*0.2), 0.3)
             self.mass_defs[idx_a] = (ax, ay, ar)
             self.mass_defs[idx_b] = (bx, by, br)
 
@@ -115,8 +125,8 @@ class SoftBody:
             joint = self.world.CreateDistanceJoint(
                     bodyA=a,
                     bodyB=b,
-                    frequencyHz=20.0,
-                    dampingRatio=0.1,
+                    frequencyHz=4.0,
+                    dampingRatio=0.5,
                     length=l)
             self.joints.append(joint)
         for muscle in self.muscles:

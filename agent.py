@@ -36,7 +36,6 @@ def main(args):
 
     # actor critic 
     ac = ActorCritic(obs_dim, act_dim, discrete).to(args.device)
-    print('Number of parameters', count_vars(ac))
 
     # Set up experience buffer
     steps_per_epoch = int(args.steps_per_epoch)
@@ -169,7 +168,7 @@ def main(args):
         # Perform VPG update!
         update()
 
-        if epoch % 10 == 0:
+        if epoch % 1 == 0:
             vals = {key: np.mean(val) for key, val in logs.items()}
             for key in vals:
                 writer.add_scalar(key, vals[key], epoch)
@@ -188,7 +187,7 @@ if __name__ == '__main__':
     parser.add_argument('--lam', type=float, default=0.97, help='GAE-lambda factor')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--steps_per_epoch', type=int, default=4000, help='Number of env steps to run during optimizations')
-    parser.add_argument('--max_ep_len', type=int, default=2000)
+    parser.add_argument('--max_ep_len', type=int, default=1000)
 
     parser.add_argument('--train_pi_iters', type=int, default=4)
     parser.add_argument('--train_v_iters', type=int, default=40)

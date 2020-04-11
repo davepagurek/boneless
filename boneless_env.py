@@ -9,12 +9,12 @@ from soft_body import SoftBody
 class BonelessEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, mesh="bodies/quad.obj", muscles="bodies/muscles.obj"):
+    def __init__(self, mesh="bodies/worm.obj", muscles="bodies/worm-muscles.obj"):
         super(BonelessEnv, self).__init__()
 
         # How much of the previous spring length to preserve when making a change
         # (0 transitions immediately to new spring lengths)
-        self.smooth = 0.2
+        self.smooth = 0.5
 
         self.time = 0
 
@@ -38,9 +38,10 @@ class BonelessEnv(gym.Env):
         n_muscles = self.soft_body.num_muscles()
 
         # Actions: Top-left 2x2 submatrix of each muscle's transformation matrix
+        # Actions: rotation + skew + scale
         self.action_space = spaces.Box(
-                -np.finfo(np.float32).max * np.ones(4*n_muscles),
-                np.finfo(np.float32).max * np.ones(4*n_muscles),
+                -np.finfo(np.float32).max * np.ones(3*n_muscles),
+                np.finfo(np.float32).max * np.ones(3*n_muscles),
                 dtype=np.float32)
 
         # Observations: Relative coordinates and velocities of each mass
@@ -48,8 +49,12 @@ class BonelessEnv(gym.Env):
                 -np.finfo(np.float32).max * np.ones(4*n_verts),
                 np.finfo(np.float32).max * np.ones(4*n_verts),
                 dtype=np.float32)
+        # self.observation_space = spaces.Box(
+                # np.array([0]), np.array([1]),
+                # dtype=np.float32)
 
     def observe_state(self):
+        # return np.array([ math.sin(self.time/100) ])
         n_verts = self.soft_body.num_vertices()
         state = []
 
@@ -66,8 +71,9 @@ class BonelessEnv(gym.Env):
         return np.array(state)
 
     def make_reward(self):
-        avg_velocity_x, _ = self.soft_body.get_avg_velocity()
-        return avg_velocity_x*10
+        # avg_velocity_x, _ = self.soft_body.get_avg_velocity()
+        com_x, _ = self.soft_body.get_center_of_mass()
+        return (com_x - self.x0)*0.1
 
     def is_done(self):
         return self.time >= 10
@@ -75,6 +81,7 @@ class BonelessEnv(gym.Env):
     def reset(self):
         self.time = 0
         self.soft_body.reset()
+        self.x0, self.y0 = self.soft_body.get_center_of_mass()
         observation = self.observe_state()
         return observation
 
