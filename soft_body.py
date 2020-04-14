@@ -110,7 +110,7 @@ class SoftBody:
         for x, y, r in self.mass_defs:
             body = self.world.CreateDynamicBody(
                     position=(self.x0 + self.s*x, self.y0 + self.s*y),
-                    fixedRotation=False)
+                    fixedRotation=True)
             circle = body.CreateCircleFixture(
                     radius=r,
                     density=self.density,

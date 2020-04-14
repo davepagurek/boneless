@@ -6,6 +6,8 @@ import math
 import numpy as np
 from soft_body import SoftBody
 
+gym.logger.set_level(40)
+
 class BonelessEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
@@ -42,13 +44,13 @@ class BonelessEnv(gym.Env):
         self.action_space = spaces.Box(
                 -np.finfo(np.float32).max * np.ones(3*n_muscles),
                 np.finfo(np.float32).max * np.ones(3*n_muscles),
-                dtype=np.float32)
+                dtype=np.float64)
 
         # Observations: Relative coordinates and velocities of each mass
         self.observation_space = spaces.Box(
                 -np.finfo(np.float32).max * np.ones(4*n_verts),
                 np.finfo(np.float32).max * np.ones(4*n_verts),
-                dtype=np.float32)
+                dtype=np.float64)
         # self.observation_space = spaces.Box(
                 # np.array([0]), np.array([1]),
                 # dtype=np.float32)
