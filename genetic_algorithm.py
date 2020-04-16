@@ -1,5 +1,6 @@
 from boneless_env import BonelessEnv
-from simple_neural_network import SimpleNeuralNetwork
+# from simple_neural_network import SimpleNeuralNetwork
+from soft_body_controller import SoftBodyController
 
 import sys
 import torch
@@ -13,6 +14,11 @@ import time
 def make_new_env():
     return BonelessEnv("bodies/quad.obj", "bodies/quad-muscles.obj")
 
+hidden_state_dim = 8
+
+def make_new_controller(env):
+    return SoftBodyController(env.get_soft_body(), hidden_state_dim)
+
 global_env = make_new_env()
 
 obs_dim = global_env.observation_space.shape[0]
@@ -21,22 +27,23 @@ act_dim = global_env.action_space.shape[0]
 def mutate_policy_vector(policy, sigma):
     return policy + sigma * (2.0 * np.random.random(policy.shape) - 1.0)
 
-pi_dim = SimpleNeuralNetwork(obs_dim, act_dim).num_parameters()
 
-def create_policy(policy_vector):
-    pi = SimpleNeuralNetwork(obs_dim, act_dim)
+pi_dim = make_new_controller(global_env).num_parameters()
+
+def create_policy(env, policy_vector):
+    pi = make_new_controller(env)
     pi.replace_parameters(policy_vector)
     return pi
 
 def initial_policy():
-    return mutate_policy_vector(np.zeros(pi_dim), 5.0)
+    return mutate_policy_vector(np.zeros(pi_dim), 1.0)
 
 def eval_policy(env, policy_vector, render=False):
-    pi = create_policy(policy_vector)
+    pi = create_policy(env, policy_vector)
     obs = env.reset()
     total_reward = 0
     while True:
-        act = pi(torch.tensor(obs)).detach().numpy()
+        act = pi.step(obs)
         obs, reward, done, _ = env.step(act)
         total_reward += reward
         if render:
@@ -54,16 +61,16 @@ def eval_policy_process_worker(pi):
 
 def main():
     # population size
-    N = 100
+    N = 200
 
     # the population
     P = [initial_policy() for _ in range(N)]
 
     # truncation selection
-    T = 20
+    T = 40
 
     # mutation rate
-    sigma = 0.2
+    sigma = 0.1
 
     # just for visualizing the first random policy
     eval_policy(global_env, P[0], render=True)
