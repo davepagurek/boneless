@@ -88,7 +88,8 @@ class BonelessEnv(gym.Env):
         return observation
 
     def step(self, action):
-        self.world.Step(self.TIME_STEP, 50, 10)
+        # self.world.Step(self.TIME_STEP, 50, 10)
+        self.world.Step(self.TIME_STEP, 5, 5)
         self.time += self.TIME_STEP
 
         self.soft_body.set_muscle_transforms(action)

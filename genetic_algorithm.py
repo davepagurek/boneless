@@ -10,7 +10,10 @@ from multiprocessing import Pool
 import pickle
 import time
 
-global_env = BonelessEnv()
+def make_new_env():
+    return BonelessEnv("bodies/quad.obj", "bodies/quad-muscles.obj")
+
+global_env = make_new_env()
 
 obs_dim = global_env.observation_space.shape[0]
 act_dim = global_env.action_space.shape[0]
@@ -26,7 +29,7 @@ def create_policy(policy_vector):
     return pi
 
 def initial_policy():
-    return mutate_policy_vector(np.zeros(pi_dim), 2.0)
+    return mutate_policy_vector(np.zeros(pi_dim), 5.0)
 
 def eval_policy(env, policy_vector, render=False):
     pi = create_policy(policy_vector)
@@ -45,7 +48,7 @@ def eval_policy(env, policy_vector, render=False):
     return total_reward
 
 def eval_policy_process_worker(pi):
-    local_env = BonelessEnv()
+    local_env = make_new_env()
     r = eval_policy(local_env, pi)
     return (pi, r)
 
@@ -57,23 +60,29 @@ def main():
     P = [initial_policy() for _ in range(N)]
 
     # truncation selection
-    T = 10
+    T = 20
 
     # mutation rate
-    sigma = 0.1
+    sigma = 0.2
 
     # just for visualizing the first random policy
     eval_policy(global_env, P[0], render=True)
 
     current_generation = 0
-    while True:
+    for i in range(100):
         current_generation += 1
         print("Generation", current_generation)
 
         start_time = time.time()
 
         with Pool() as process_pool:
-            P_and_rewards = process_pool.map(eval_policy_process_worker, P)
+            # P_and_rewards = process_pool.map(eval_policy_process_worker, P)
+            P_and_rewards = []
+            for i, res in enumerate(process_pool.imap_unordered(eval_policy_process_worker, P, 1)):
+                P_and_rewards.append(res)
+                sys.stdout.write("\r[%-50s] %d/%d" % ('=' * ((i + 1) * 50 // N), (i + 1), N))
+                sys.stdout.flush()
+        print("\n")
 
         end_time = time.time()
 
@@ -98,7 +107,7 @@ def main():
         with open("best_policy_vector_so_far.pkl", "wb") as outfile:
             pickle.dump(best_pi, outfile)
 
-        if current_generation % 10 == 0:
+        if current_generation % 2 == 0:
             eval_policy(global_env, best_pi, render=True)
 
 if __name__ == "__main__":

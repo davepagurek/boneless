@@ -125,7 +125,7 @@ class SoftBody:
             joint = self.world.CreateDistanceJoint(
                     bodyA=a,
                     bodyB=b,
-                    frequencyHz=4.0,
+                    frequencyHz=16.0,
                     dampingRatio=0.5,
                     length=l)
             self.joints.append(joint)
@@ -195,10 +195,11 @@ class SoftBody:
             a.position[0] - b.position[0],
             a.position[1] - b.position[1]
         )
-        return l;
+        return l
 
     def set_edge_rest_length(self, idx, length):
         j = self.joints[idx]
+        length = min(max(length, 0.5), 1.0)
         j._b2DistanceJoint__SetLength(length)
 
     def get_center_of_mass(self):
