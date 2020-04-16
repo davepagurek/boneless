@@ -24,7 +24,7 @@ import PIL
 
 def main(args):
     # create environment 
-    env = BonelessEnv()
+    env = BonelessEnv("bodies/quad.obj", "bodies/quad-muscles.obj")
     env.seed(args.seed)
     obs_dim = env.observation_space.shape[0]
     if isinstance(env.action_space, Discrete):

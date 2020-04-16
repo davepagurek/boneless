@@ -2,8 +2,49 @@ import math
 import gym
 import numpy as np
 import itertools
+from gym.envs.classic_control import rendering
 
 from obj import parse_obj
+
+import pyglet
+from pyglet.gl import *
+
+class TexturedTriangles(rendering.Geom):
+    def __init__(self, texture_path):
+        rendering.Geom.__init__(self)
+        self.img = pyglet.image.load(texture_path)
+        self.tex = self.img.get_texture()
+
+    def set_data(self, vertices, uvs, indices):
+        self.vertices = []
+        for x, y in vertices:
+            self.vertices.append(x)
+            self.vertices.append(y)
+            self.vertices.append(0)
+        self.vertices = tuple(self.vertices)
+
+        self.uvs = []
+        for u, v in uvs:
+            self.uvs.append(u)
+            self.uvs.append(v)
+        self.uvs = tuple(self.uvs)
+
+        self.indices = []
+        for a, b, c in indices:
+            self.indices.append(a)
+            self.indices.append(b)
+            self.indices.append(c)
+
+    def render1(self):
+        glEnable(GL_TEXTURE_2D)
+        glBindTexture(GL_TEXTURE_2D, self.tex.id)
+        glColor4f(1, 1, 1, 1)
+        pyglet.graphics.draw_indexed(
+                len(self.vertices) // 3,
+                GL_TRIANGLES,
+                self.indices,
+                ('v3f', self.vertices),
+                ('t2f', self.uvs))
 
 class Muscle:
     def __init__(self, x, y):
@@ -67,8 +108,15 @@ class SoftBody:
         self.mass_defs = [] # (x, y, r)
         self.joint_defs = [] # (idx_a, idx_b)
 
-        mass_verts, mass_edges = parse_obj(mesh_path)
-        muscle_verts, _ = parse_obj(muscles_path)
+        mass_verts, mass_edges, mass_faces = parse_obj(mesh_path)
+        muscle_verts, _, _ = parse_obj(muscles_path)
+
+        min_x = min([ x for x, _, _ in mass_verts ])
+        max_x = max([ x for x, _, _ in mass_verts ])
+        min_y = min([ y for _, y, _ in mass_verts ])
+        max_y = max([ y for _, y, _ in mass_verts ])
+
+        self.uvs = [ ((x-min_x)/(max_x-min_x), (y-min_y)/(max_y-min_y)) for x, y, _ in mass_verts ]
 
         self.muscles = [ Muscle(x,y) for x, y, _ in muscle_verts ]
 
@@ -79,6 +127,7 @@ class SoftBody:
         self.mass_defs = [ (x, y, 1.0) for x, y, _ in mass_verts ] # (x, y, r)
         self.joint_defs = mass_edges # (idx_a, idx_b)
         self.joint_muscles = []
+        self.mass_faces = mass_faces
 
         # array with same indices as mass defs, each element is the muscle(s)
         # to which that mass belongs
@@ -276,29 +325,32 @@ class SoftBody:
 
     # TODO: allow parent transform to be passed (i.e. for scaling and translating entire view/entire object)
     def create_geometry(self, viewer, PPM):
-        self.transforms = []
-        self.lines = []
-        from gym.envs.classic_control import rendering
-        for m in self.masses:
-            rad = m.fixtures[0].shape.radius
-            circle = rendering.make_circle(PPM * rad)
-            transform = rendering.Transform()
-            circle.add_attr(transform)
-            self.transforms.append(transform)
-            viewer.add_geom(circle)
+        self.shape = TexturedTriangles("textures/creature.png")
+        viewer.add_geom(self.shape)
+        # self.transforms = []
+        # self.lines = []
+        # for m in self.masses:
+            # rad = m.fixtures[0].shape.radius
+            # circle = rendering.make_circle(PPM * rad)
+            # transform = rendering.Transform()
+            # circle.add_attr(transform)
+            # self.transforms.append(transform)
+            # viewer.add_geom(circle)
 
-        for muscle, (idx_a, idx_b) in zip(self.joint_muscles, self.joint_defs):
-            line = rendering.make_polyline([(0, 0), (1, 0)])
-            line.set_linewidth(2)
-            line.set_color(*muscle.color)
-            viewer.add_geom(line)
-            self.lines.append(line)
+        # for muscle, (idx_a, idx_b) in zip(self.joint_muscles, self.joint_defs):
+            # line = rendering.make_polyline([(0, 0), (1, 0)])
+            # line.set_linewidth(2)
+            # line.set_color(*muscle.color)
+            # viewer.add_geom(line)
+            # self.lines.append(line)
         
     def update_geometry(self, viewer, PPM):
-        for transform, mass in zip(self.transforms, self.masses):
-            transform.set_translation(PPM * mass.position[0], PPM * mass.position[1])
-        for line, (idx_a, idx_b) in zip(self.lines, self.joint_defs):
-            mass_a = self.masses[idx_a]
-            mass_b = self.masses[idx_b]
-            line.v[0] = (PPM * mass_a.position[0], PPM * mass_a.position[1])
-            line.v[1] = (PPM * mass_b.position[0], PPM * mass_b.position[1])
+        vertices = [ [PPM*m.position[0], PPM*m.position[1]] for m in self.masses ]
+        self.shape.set_data(vertices, self.uvs, self.mass_faces)
+        # for transform, mass in zip(self.transforms, self.masses):
+            # transform.set_translation(PPM * mass.position[0], PPM * mass.position[1])
+        # for line, (idx_a, idx_b) in zip(self.lines, self.joint_defs):
+            # mass_a = self.masses[idx_a]
+            # mass_b = self.masses[idx_b]
+            # line.v[0] = (PPM * mass_a.position[0], PPM * mass_a.position[1])
+            # line.v[1] = (PPM * mass_b.position[0], PPM * mass_b.position[1])

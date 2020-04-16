@@ -1,4 +1,5 @@
 box2d-py
-pygame
 gym
 numpy
+sk-video
+scikit-image

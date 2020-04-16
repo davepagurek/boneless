@@ -9,8 +9,8 @@ class Network(nn.Module):
     def __init__(self, in_dim, out_dim):
         super().__init__()
         # NOTE: feel free to experiment with this network
-        self.linin = nn.Linear(in_dim, 200)
-        self.linout = nn.Linear(200, out_dim)
+        self.linin = nn.Linear(in_dim, 8)
+        self.linout = nn.Linear(8, out_dim)
 
         # initialize weights and bias to 0 in the last layer.
         # this ensures the actors starts out completely random in the beginning, and that the value function starts at 0
