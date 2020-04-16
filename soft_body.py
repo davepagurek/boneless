@@ -1,6 +1,7 @@
 import math
 import gym
 import numpy as np
+import itertools
 
 from obj import parse_obj
 
@@ -16,6 +17,7 @@ class Muscle:
         self.set_transform([0, 0, 1])
 
     def set_transform(self, transform):
+        assert(len(transform) == 3)
         angle = transform[0]
         skew = transform[1]
         scale = 0.1 + 1 / (1 + math.exp(-transform[2]))
@@ -41,7 +43,7 @@ class Muscle:
             transformed_a = self.transform @ relative_a
             transformed_b = self.transform @ relative_b
             target_length = np.linalg.norm(transformed_a - transformed_b)
-            orig_length = math.hypot(ax-bx, ay-by);
+            orig_length = math.hypot(ax-bx, ay-by)
             target_length = max(0.5*orig_length, min(2*orig_length, target_length))
             lengths.append((idx, target_length))
 
@@ -50,6 +52,9 @@ class Muscle:
     def add_joint(self, joint_idx, endpoint_a, endpoint_b):
         self.joint_indices.append(joint_idx)
         self.joint_endpoints.append((endpoint_a, endpoint_b))
+
+    def get_joint_indices(self):
+        return self.joint_indices
 
     def dist_to(self, x, y):
         return math.hypot(self.position[0] - x, self.position[1] - y)
@@ -66,9 +71,24 @@ class SoftBody:
         muscle_verts, _ = parse_obj(muscles_path)
 
         self.muscles = [ Muscle(x,y) for x, y, _ in muscle_verts ]
+
+        # array with same indices as self.muscles, each entry is the list
+        # of adjacent muscles for that muscle
+        self.muscle_adjacencies = [ [] for _ in muscle_verts ]
+
         self.mass_defs = [ (x, y, 1.0) for x, y, _ in mass_verts ] # (x, y, r)
         self.joint_defs = mass_edges # (idx_a, idx_b)
         self.joint_muscles = []
+
+        # array with same indices as mass defs, each element is the muscle(s)
+        # to which that mass belongs
+        muscles_per_mass = [ [] for _ in mass_verts ]
+
+        def add_muscle_at_mass(muscle_idx, mass_idx):
+            lst = muscles_per_mass[mass_idx]
+            if not muscle_idx in lst:
+                lst.append(muscle_idx)
+
 
         for joint_idx, (idx_a, idx_b) in enumerate(self.joint_defs):
             [ax, ay, ar] = self.mass_defs[idx_a]
@@ -88,6 +108,10 @@ class SoftBody:
             self.muscles[closest_muscle].add_joint(joint_idx, (ax, ay), (bx, by))
             self.joint_muscles.append(self.muscles[closest_muscle])
 
+            # record which muscles influence the vertices
+            add_muscle_at_mass(closest_muscle, idx_a)
+            add_muscle_at_mass(closest_muscle, idx_b)
+
         self.total_weight = 10
         self.total_area = sum([ math.pi*r*r for _, _, r in self.mass_defs ])
         self.density = self.total_weight / self.total_area
@@ -98,6 +122,17 @@ class SoftBody:
 
         self.joints = []
         self.masses = []
+
+        # for each mass and the muscles that influence it directly
+        for mass_idx, influencing_muscles in enumerate(muscles_per_mass):
+            # for each pair of muscles
+            for (muscle_a, muscle_b) in itertools.combinations(influencing_muscles, 2):
+                adjacent_to_a = self.muscle_adjacencies[muscle_a]
+                adjacent_to_b = self.muscle_adjacencies[muscle_b]
+                if not muscle_a in adjacent_to_b:
+                    adjacent_to_b.append(muscle_a)
+                if not muscle_b in adjacent_to_a:
+                    adjacent_to_a.append(muscle_b)
 
     def reset(self):
         for joint in self.joints:
@@ -141,9 +176,26 @@ class SoftBody:
     def num_muscles(self):
         return len(self.muscles)
 
+    def get_muscle(self, idx):
+        return self.muscles[idx]
+
+    def get_muscle_edge_actual_lengths(self, muscle_idx):
+        ret = []
+        for j, m in enumerate(self.joint_muscles):
+            if (m == muscle_idx):
+                ret.append(self.get_edge_actual_length(j))
+        return ret
+                
+
     def set_muscle_transforms(self, transforms):
+        assert(isinstance(transforms, np.ndarray))
+        assert(len(transforms.shape) == 1)
+        assert(transforms.shape[0] == (self.num_muscles() * 3))
         for transform, muscle in zip(np.split(transforms, self.num_muscles()), self.muscles):
             muscle.set_transform(transform)
+
+    def get_adjacent_muscles(self, idx):
+        return self.muscle_adjacencies[idx]
 
     def target_edge_lengths(self):
         targets = [1] * self.num_edges()

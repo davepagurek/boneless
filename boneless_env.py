@@ -16,7 +16,7 @@ class BonelessEnv(gym.Env):
 
         # How much of the previous spring length to preserve when making a change
         # (0 transitions immediately to new spring lengths)
-        self.smooth = 0.5
+        self.smooth = 0.75
 
         self.time = 0
 
@@ -55,21 +55,29 @@ class BonelessEnv(gym.Env):
                 # np.array([0]), np.array([1]),
                 # dtype=np.float32)
 
+    def get_soft_body(self):
+        return self.soft_body
+
     def observe_state(self):
         # return np.array([ math.sin(self.time/100) ])
-        n_verts = self.soft_body.num_vertices()
+        # n_verts = self.soft_body.num_vertices()
+        # state = []
+
+        # com_x, com_y = self.soft_body.get_center_of_mass()
+        # avg_velocity_x, avg_velocity_y = self.soft_body.get_avg_velocity()
+        # for i in range(n_verts):
+        #     x, y = self.soft_body.get_vertex_position(i)
+        #     vx, vy = self.soft_body.get_vertex_velocity(i)
+        #     state.append(x - com_x)
+        #     state.append(y - com_y)
+        #     state.append(vx - avg_velocity_x)
+        #     state.append(vy - avg_velocity_y)
+
+        # return np.array(state)
+
         state = []
-
-        com_x, com_y = self.soft_body.get_center_of_mass()
-        avg_velocity_x, avg_velocity_y = self.soft_body.get_avg_velocity()
-        for i in range(n_verts):
-            x, y = self.soft_body.get_vertex_position(i)
-            vx, vy = self.soft_body.get_vertex_velocity(i)
-            state.append(x - com_x)
-            state.append(y - com_y)
-            state.append(vx - avg_velocity_x)
-            state.append(vy - avg_velocity_y)
-
+        for i in range(self.soft_body.num_edges()):
+            state.append(self.soft_body.get_edge_actual_length(i))
         return np.array(state)
 
     def make_reward(self):
