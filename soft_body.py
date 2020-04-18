@@ -103,7 +103,7 @@ class SoftBody:
 
             # Assign this joint to closest muscle to joint center
             dists = [ m.dist_to((ax+bx)/2, (ay+by)/2) for m in self.muscles ]
-            closest_muscle = dists.index(min(dists))
+            closest_muscle = np.argmin(dists)
 
             self.muscles[closest_muscle].add_joint(joint_idx, (ax, ay), (bx, by))
             self.joint_muscles.append(self.muscles[closest_muscle])
@@ -161,7 +161,7 @@ class SoftBody:
                     bodyA=a,
                     bodyB=b,
                     frequencyHz=16.0,
-                    dampingRatio=0.5,
+                    dampingRatio=0.9,
                     length=l)
             self.joints.append(joint)
         for muscle in self.muscles:
@@ -251,7 +251,8 @@ class SoftBody:
 
     def set_edge_rest_length(self, idx, length):
         j = self.joints[idx]
-        length = min(max(length, 0.5), 1.0)
+        orig = self.get_orig_edge_rest_length(idx)
+        length = min(max(length, 0.7 * orig), 1.3 * orig)
         j._b2DistanceJoint__SetLength(length)
 
     def get_center_of_mass(self):

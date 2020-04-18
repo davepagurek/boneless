@@ -12,17 +12,21 @@ import pickle
 import time
 
 def make_new_env():
+    # return BonelessEnv("bodies/skinnyworm.obj", "bodies/skinnyworm-muscles.obj")
+    # return BonelessEnv("bodies/fatworm.obj", "bodies/fatworm-muscles.obj")
     return BonelessEnv("bodies/quad.obj", "bodies/quad-muscles.obj")
+    # return BonelessEnv("bodies/horse.obj", "bodies/horse-muscles.obj")
 
 hidden_state_dim = 8
-
-def make_new_controller(env):
-    return SoftBodyController(env.get_soft_body(), hidden_state_dim)
 
 global_env = make_new_env()
 
 obs_dim = global_env.observation_space.shape[0]
 act_dim = global_env.action_space.shape[0]
+
+def make_new_controller(env):
+    return SoftBodyController(env.get_soft_body(), hidden_state_dim)
+    # return SimpleNeuralNetwork(obs_dim, act_dim)
 
 def mutate_policy_vector(policy, sigma):
     return policy + sigma * (2.0 * np.random.random(policy.shape) - 1.0)
@@ -67,16 +71,18 @@ def main():
     P = [initial_policy() for _ in range(N)]
 
     # truncation selection
-    T = 40
+    T = 10
 
     # mutation rate
-    sigma = 0.1
+    sigma = 0.001
 
     # just for visualizing the first random policy
-    eval_policy(global_env, P[0], render=True)
+    # eval_policy(global_env, P[0], render=True)
+
+    population_progress = []
 
     current_generation = 0
-    for i in range(100):
+    for i in range(500):
         current_generation += 1
         print("Generation", current_generation)
 
@@ -99,6 +105,8 @@ def main():
         top_T = list(map(take_first, P_and_rewards_sorted[-T:]))
         best_pi = top_T[-1]
 
+        population_progress.append(list(map(take_second, P_and_rewards_sorted)))
+
         P.clear()
         P.append(best_pi)
         while len(P) < N:
@@ -113,9 +121,16 @@ def main():
         print("\n")
         with open("best_policy_vector_so_far.pkl", "wb") as outfile:
             pickle.dump(best_pi, outfile)
+        with open("population_progress.pkl", "wb") as outfile:
+            pickle.dump(np.array(population_progress), outfile)
 
         if current_generation % 2 == 0:
             eval_policy(global_env, best_pi, render=True)
 
 if __name__ == "__main__":
     main()
+
+# To visualize a saved policy, run this instead of main:
+# with open("best_policy_vector_so_far.pkl", "rb") as infile:
+#     best_pi = pickle.load(infile)
+# eval_policy(global_env, best_pi, render=True)

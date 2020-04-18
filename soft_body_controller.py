@@ -58,6 +58,8 @@ class SoftBodyController():
             adjacent_muscle_indices = the_soft_body.get_adjacent_muscles(i)
             self.muscle_controllers.append(MuscleController(hidden_state_dim, joint_indices, adjacent_muscle_indices))
         self.n_joints = the_soft_body.num_edges()
+        self.timestep = 0
+        self.update_interval = 4
             
     def step(self, obs):
         assert(len(obs.shape) == 1)
@@ -65,18 +67,21 @@ class SoftBodyController():
 
         # obs_matrix = obs.reshape(self.n_joints, 4)
 
-        for msc in self.muscle_controllers:
-            msc.swap_state()
+        if self.timestep % self.update_interval == 0:
+            for msc in self.muscle_controllers:
+                msc.swap_state()
 
-        for msc in self.muscle_controllers:
-            local_joint_state = obs[msc.get_joint_indices()].reshape(-1)
-            adjacent_muscle_state = np.array([ self.muscle_controllers[i].get_previous_state() for i in msc.get_adjacent_muscle_indices() ])
-            msc.observe(local_joint_state, adjacent_muscle_state)
+            for msc in self.muscle_controllers:
+                local_joint_state = obs[msc.get_joint_indices()].reshape(-1)
+                adjacent_muscle_state = np.array([ self.muscle_controllers[i].get_previous_state() for i in msc.get_adjacent_muscle_indices() ])
+                msc.observe(local_joint_state, adjacent_muscle_state)
 
         muscle_actions = []
 
         for msc in self.muscle_controllers:
             muscle_actions.append(msc.make_action())
+
+        self.timestep += 1
 
         return np.array(muscle_actions).reshape(-1)
 
@@ -98,4 +103,5 @@ class SoftBodyController():
     def reset(self):
         for msc in self.muscle_controllers:
             msc.reset()
+        self.timestep = 0
 

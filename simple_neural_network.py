@@ -1,38 +1,33 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import numpy as np
 
-class SimpleNeuralNetwork(nn.Module):
+class SimpleNeuralNetwork():
     def __init__(self, state_size, action_size):
-        super(SimpleNeuralNetwork, self).__init__()
-        self.fc0 = nn.Linear(state_size, 8)
-        self.fc1 = nn.Linear(8, action_size)
+        self.fc0 = np.zeros((8, state_size))
+        self.fc1 = np.zeros((action_size, 8))
+        self.timestep = 0
+        self.update_interval = 4
 
     def forward(self, x):
-        x = x.float()
-        x = nn.ReLU()(self.fc0(x))
-        x = nn.ReLU()(self.fc1(x))
-        return x
+        x0 = self.fc0 @ x
+        x1 = np.maximum(x0, 0.0)
+        x2 = self.fc1 @ x1
+        return x2
+
+    def step(self, obs):
+        if self.timestep % self.update_interval == 0:
+            self.cached = self.forward(obs)
+        self.timestep += 1
+        return self.cached
 
     def num_parameters(self):
-        n = 0
-        for param_name, param in self.state_dict().items():
-            if not "weight" in param_name:
-                continue
-            n += param.view(-1).shape[0]
-        return n
+        return self.fc0.size + self.fc1.size
 
     def replace_parameters(self, param_vector):
-        param_vector = torch.tensor(param_vector)
-        # https://stackoverflow.com/a/49448065
+        param_vector = np.array(param_vector)
         assert(len(param_vector.shape) == 1)
         assert(param_vector.shape[0] == self.num_parameters())
-        state_dict = self.state_dict()
-        for param_name, param in state_dict.items():
-            if not "weight" in param_name:
-                continue
-            n = param.view(-1).shape[0]
-            new_param = param_vector[:n].view(param.shape)
+        for param in [self.fc0, self.fc1]:
+            n = param.size
+            param[...] = param_vector[:n].reshape(param.shape)
             param_vector = param_vector[n:]
-            state_dict[param_name].copy_(new_param)
-        assert(param_vector.shape[0] == 0)
+        assert(param_vector.size == 0)

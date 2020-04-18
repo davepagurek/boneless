@@ -16,7 +16,7 @@ class BonelessEnv(gym.Env):
 
         # How much of the previous spring length to preserve when making a change
         # (0 transitions immediately to new spring lengths)
-        self.smooth = 0.75
+        self.smooth = 0.9
 
         self.time = 0
 
@@ -46,11 +46,16 @@ class BonelessEnv(gym.Env):
                 np.finfo(np.float32).max * np.ones(3*n_muscles),
                 dtype=np.float64)
 
-        # Observations: Relative coordinates and velocities of each mass
+        # Observations: length of every joint
         self.observation_space = spaces.Box(
-                -np.finfo(np.float32).max * np.ones(4*n_verts),
-                np.finfo(np.float32).max * np.ones(4*n_verts),
+                -np.finfo(np.float32).max * np.ones(n_edges),
+                np.finfo(np.float32).max * np.ones(n_edges),
                 dtype=np.float64)
+        # Observations: Relative coordinates and velocities of each mass
+        # self.observation_space = spaces.Box(
+        #         -np.finfo(np.float32).max * np.ones(4*n_verts),
+        #         np.finfo(np.float32).max * np.ones(4*n_verts),
+        #         dtype=np.float64)
         # self.observation_space = spaces.Box(
                 # np.array([0]), np.array([1]),
                 # dtype=np.float32)
@@ -96,8 +101,8 @@ class BonelessEnv(gym.Env):
         return observation
 
     def step(self, action):
-        # self.world.Step(self.TIME_STEP, 50, 10)
-        self.world.Step(self.TIME_STEP, 5, 5)
+        self.world.Step(self.TIME_STEP, 50, 50)
+        # self.world.Step(self.TIME_STEP, 10, 10)
         self.time += self.TIME_STEP
 
         self.soft_body.set_muscle_transforms(action)
