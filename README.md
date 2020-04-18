@@ -28,7 +28,7 @@ We optimized policies using a genetic algorithm (GA) and using Proximal Policy O
   </tr>
 </table>
 
-## Control Schemes
+## Control schemes
 
 We wanted to compare how policy effectiveness changes when you go from a single controller with full state knowledge to a set of distributed controllers, with only local state knowledge and the ability to pass information to neighbouring controllers.
 
