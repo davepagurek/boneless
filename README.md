@@ -58,6 +58,16 @@ We wanted to compare how policy effectiveness changes when you go from a single 
 
 <table>
   <tr>
+    <td><img src="https://raw.githubusercontent.com/davepagurek/boneless/master/gifs/tetrapus%20best%20foot%20forward.gif" /></td>
+    <td><img src="https://raw.githubusercontent.com/davepagurek/boneless/master/gifs/fatworm_somersault.gif" /></td>
+  </tr>
+  <tr>
+    <td colspan="2"><em>Alternative methods of locomotion</em></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
     <td><img src="https://raw.githubusercontent.com/davepagurek/boneless/master/gifs/textured.gif" /></td>
   </tr>
   <tr>
